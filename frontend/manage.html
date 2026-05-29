@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Management - Agrisens</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+        .container { max-width: 1200px; margin: 30px auto; }
+        .card { border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .navbar-custom {
+            background: #1a472a;
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar-custom a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+        .navbar-custom a:hover { color: #4ade80; }
+        .btn-danger-custom { background: #dc2626; color: white; }
+        .btn-danger-custom:hover { background: #b91c1c; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <div class="navbar-custom">
+        <div class="logo">
+            <i class="fas fa-seedling"></i>
+            <strong>Agrisens</strong>
+        </div>
+        <div>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/upload.html"><i class="fas fa-cloud-upload-alt"></i> Upload</a>
+            <a href="/manage.html" class="active" style="color: #4ade80;"><i class="fas fa-database"></i> Manajemen</a>
+            <a href="/peta_multispektral.html"><i class="fas fa-map"></i> Peta</a>
+            <button onclick="logout()" style="background: #dc2626; color: white; border: none; padding: 5px 15px; border-radius: 8px; cursor: pointer; margin-left: 20px;"> Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1> WebGIS Data Management</h1>
+        </div>
+        
+        <!-- Database Statistics -->
+        <div class="card">
+            <div class="card-body">
+                <h5> Database Statistics</h5>
+                <div class="row" id="stats">
+                    <div class="col-md-3">
+                        <div class="alert alert-info">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Orthomosaic History -->
+        <div class="card">
+            <div class="card-body">
+                <h5> Orthomosaic History</h5>
+                <div id="historyList" class="list-group">
+                    <div class="alert alert-secondary">Loading...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Petak -->
+        <div class="card">
+            <div class="card-body">
+                <h5> Rice Parcel Data</h5>
+                <div id="parcelsList" class="table-responsive">
+                    <div class="alert alert-secondary">Loading...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dangerous Actions -->
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="text-danger"> Dangerous Actions</h5>
+                <p class="text-muted">Delete all data from the database (cannot be undone)</p>
+                <button class="btn btn-danger" id="clearDatabaseBtn" onclick="clearDatabase()">Delete All Data</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <script>
+        // =====================================================
+        // KONFIGURASI API
+        // =====================================================
+        const API_BASE = '';
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            window.location.href = '/index.html';
+        }
+        
+        // =====================================================
+        // FUNGSI LOGOUT
+        // =====================================================
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
+        }
+        
+        // =====================================================
+        // FUNGSI MANAJEMEN DATA
+        // =====================================================
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/database/stats');
+                const stats = await response.json();
+                document.getElementById('stats').innerHTML = `
+                    <div class="col-md-3"><div class="alert alert-success"> Parcels: ${stats.farm_parcels}</div></div>
+                    <div class="col-md-3"><div class="alert alert-info"> NDVI: ${stats.ndvi_data}</div></div>
+                    <div class="col-md-3"><div class="alert alert-warning"> Recommendations: ${stats.recommendations}</div></div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/orthomosaic/history');
+                const history = await response.json();
+                
+                if (!history || !Array.isArray(history) || history.length === 0) {
+                    document.getElementById('historyList').innerHTML = '<div class="alert alert-secondary">No orthomosaic uploaded yet</div>';
+                    return;
+                }
+                
+                let html = '';
+                for (const item of history) {
+                    const statusBadge = item.status === 'completed' ? 'success' : (item.status === 'processing' ? 'warning' : 'secondary');
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${item.nama_lahan || item.filename}</strong><br>
+                                <small class="text-muted">ID: ${item.id} | Uploaded: ${new Date(item.uploaded_at).toLocaleString()}</small><br><span class="badge bg-info text-dark">Area: ${item.area_hectare ? item.area_hectare.toFixed(4) : "0.0000"} Ha</span>
+                            </div>
+                            <div>
+                                <span class="badge bg-${statusBadge}">${item.status}</span>
+                                <button class="btn btn-sm btn-primary ms-2" onclick="activateOrthomosaic('${item.id}')" title="Activate as main layer">Activate</button>
+                                <button class="btn btn-sm btn-outline-info ms-2" onclick="generateTiles('${item.id}')" title="Generate tiles for fast loading">Generate Tiles</button>
+                                <button class="btn btn-sm btn-danger ms-2" onclick="deleteOrthomosaic('${item.id}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                document.getElementById('historyList').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+        
+        async function loadParcels() {
+            try {
+                const response = await fetch('/api/parcels');
+                const parcels = await response.json();
+                
+                if (parcels.length === 0) {
+                    document.getElementById('parcelsList').innerHTML = '<div class="alert alert-secondary text-center">No analyzed parcel data yet</div>';
+                    return;
+                }
+                
+                let html = `
+                    <table class="table table-hover align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Parcel</th>
+                                <th>Field</th>
+                                <th>Area (Ha)</th>
+                                <th>Analysis (N Fertilizer)</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                for (const p of parcels) {
+                    html += `
+                        <tr>
+                            <td>
+                                <strong>${p.nama}</strong><br>
+                                <small class="text-muted">${p.id}</small>
+                            </td>
+                            <td>${p.nama_lahan}</td>
+                            <td>${p.luas_ha ? p.luas_ha.toFixed(4) : '0.0000'}</td>
+                            <td>
+                                <span class="badge bg-success">${p.ndvi_rec ? 'NDVI: ' + p.ndvi_rec : ''}</span>
+                                <span class="badge bg-info text-dark">${p.ndre_rec ? 'NDRE: ' + p.ndre_rec : ''}</span>
+                                <span class="badge bg-warning text-dark">${p.lcc_rec ? 'LCC: ' + p.lcc_rec : ''}</span>
+                            </td>
+                            <td class="text-center">
+                                <a href="/peta_multispektral.html?upload_id=${p.upload_id}&petak_id=${p.id}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-map-marked-alt"></i> View on Map
+                                </a>
+                            </td>
+                        </tr>`;
+                }
+                html += '</tbody></table>';
+                document.getElementById('parcelsList').innerHTML = html;
+            } catch (error) {
+                console.error('Error loading parcels:', error);
+                document.getElementById('parcelsList').innerHTML = '<div class="alert alert-danger">Failed to load parcel data</div>';
+            }
+        }
+        
+        async function activateOrthomosaic(id) {
+            if (confirm('Activate this orthomosaic as main layer?')) {
+                const response = await fetch(API_BASE + `/api/orthomosaic/${id}/activate`, { method: 'POST' });
+                if (response.ok) {
+                    alert('Orthomosaic activated! Refresh the map page to see.');
+                } else {
+                    alert('Failed to activate');
+                }
+            }
+        }
+        
+        async function deleteOrthomosaic(id) {
+            if (confirm('Delete this orthomosaic? Related data will also be deleted.')) {
+                const response = await fetch(API_BASE + `/api/orthomosaic/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    alert('Orthomosaic deleted');
+                    loadHistory();
+                } else {
+                    alert('Failed to delete');
+                }
+            }
+        }
+
+        async function generateTiles(id) {
+            const response = await fetch(API_BASE + `/api/orthomosaic/${id}/generate-tiles`, { method: 'POST' });
+            if (response.ok) {
+                alert('Tiling process started in background. Map will feel much faster once finished (a few minutes).');
+            } else {
+                alert('Failed to start tiling process. Ensure GDAL is installed on the server.');
+            }
+        }
+        
+        async function clearDatabase() {
+            const confirmMsg = ' PERINGATAN! Ini akan menghapus SEMUA data petak, NDVI, dan rekomendasi. Tidak bisa dibatalkan. Ketik "DELETE" untuk konfirmasi.';
+            const userInput = prompt(confirmMsg);
+            
+            if (userInput === 'DELETE') {
+                const response = await fetch('/api/database/clear?confirm=true', { method: 'DELETE' });
+                if (response.ok) {
+                    alert('Database successfully cleared');
+                    loadStats();
+                    loadHistory();
+                    loadParcels();
+                } else {
+                    alert('Failed to clear database');
+                }
+            }
+        }
+
+        // Init
+        loadStats();
+        loadHistory();
+        loadParcels();
+    </script>
+</body>
+</html>

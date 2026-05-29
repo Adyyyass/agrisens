@@ -1,0 +1,13 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.log
+*.exe
+tiles_*/
+*.tif
+*.tiff
+*.sql
+.env
+backend/uploads/
+backend/static/

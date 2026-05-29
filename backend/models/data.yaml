@@ -1,0 +1,15 @@
+names:
+- bacterial_leaf_blight
+- bacterial_leaf_streak
+- bacterial_panicle_blight
+- blast
+- brown_spot
+- dead_hearth
+- downy_mildew
+- hispa
+- normal
+- tungro
+nc: 10
+test: /content/drive/MyDrive/outfilter/test/images
+train: /content/drive/MyDrive/outfilter/train/images
+val: /content/drive/MyDrive/outfilter/val/images

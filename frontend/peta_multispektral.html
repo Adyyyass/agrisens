@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Multispectral Map - Agrisens</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .navbar {
+            background: #1a472a;
+            color: white;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 2000;
+        }
+
+        .logo {
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .navbar a:hover {
+            color: #4ade80;
+        }
+
+        #map {
+            height: calc(100vh - 60px);
+            width: 100%;
+            margin-top: 60px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 14px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            max-height: calc(100vh - 100px);
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(8px);
+        }
+
+        .sidebar-header {
+            background: #1a472a;
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 350px;
+        }
+
+        .sidebar-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background: #f0fdf4;
+        }
+
+        .sidebar-item.active {
+            background: #dcfce7;
+            border-left: 3px solid #22c55e;
+        }
+
+        .sidebar-item strong {
+            display: block;
+            font-size: 13px;
+            color: #1f2937;
+        }
+
+        .sidebar-item small {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .sidebar-item .badges {
+            margin-top: 4px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 3px;
+        }
+
+        .badge-rgb {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-ndvi {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-ndre {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-petak {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .empty-state {
+            padding: 30px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        /* Layer Control */
+        .layer-control {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.97);
+            padding: 15px;
+            border-radius: 14px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            display: none;
+        }
+
+        .layer-control h4 {
+            font-size: 13px;
+            color: #1a472a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .layer-btn {
+            display: block;
+            width: 100%;
+            margin: 4px 0;
+            padding: 8px 12px;
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .layer-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .layer-btn.active {
+            background: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+
+        .layer-control hr {
+            border: 0;
+            border-top: 1px solid #e5e7eb;
+            margin: 10px 0;
+        }
+
+        .seg-label {
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #374151;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .legend-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #1a472a;
+        }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 3px 0;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 14px;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Info panel */
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 14px;
+            padding: 16px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .info-panel h4 {
+            color: #1a472a;
+            margin-bottom: 8px;
+            font-size: 14px;
+            border-bottom: 2px solid #4caf50;
+            padding-bottom: 6px;
+        }
+
+        .info-panel p {
+            font-size: 13px;
+            color: #374151;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <div class="logo"><i class="fas fa-seedling"></i> Agrisens - Multispectral</div>
+        <div>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/upload.html"><i class="fas fa-cloud-upload-alt"></i> Upload</a>
+            <a href="/manage.html"><i class="fas fa-database"></i> Management</a>
+            <a href="/peta_multispektral.html" class="active"><i class="fas fa-map"></i> Map</a>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Sidebar: Saved Uploads -->
+    <div class="sidebar">
+        <div class="sidebar-header"><i class="fas fa-database"></i> Multispectral Data</div>
+        <div id="sidebarList" class="sidebar-list">
+            <div class="empty-state"><i class="fas fa-spinner fa-pulse"></i> Loading...</div>
+        </div>
+    </div>
+
+    <!-- Layer Control -->
+    <div class="layer-control" id="layerControl">
+        <h4><i class="fas fa-layer-group"></i> Select Layer</h4>
+        <div id="layerButtons"></div>
+        <hr>
+        <label class="seg-label">
+            <input type="checkbox" id="checkSeg" onchange="toggleSegmentation()">
+            <i class="fas fa-border-all"></i> Field Plot Detection
+        </label>
+        <div id="segInfo" style="font-size: 11px; color: #6b7280; margin-top: 6px; display: none;"></div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend" id="legend">
+        <div class="legend-title"> NDVI/NDRE Legend</div>
+        <div class="legend-row"><span class="legend-color" style="background:#1a9850;"></span> >0.8 (Very Healthy)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#66bd63;"></span> 0.6-0.8 (Healthy)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#d9ef8b;"></span> 0.4-0.6 (Moderate)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#fee08b;"></span> 0.2-0.4 (Low)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#fdae61;"></span> 0-0.2 (Stressed)</div>
+        <div class="legend-row"><span class="legend-color" style="background:#d73027;"></span>
+            <0 (Critical)</div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="info-panel" id="infoPanel">
+            <h4><i class="fas fa-info-circle"></i> Information</h4>
+            <p id="infoContent">Select data from the sidebar to display the multispectral map</p>
+        </div>
+
+        <script>
+            // ============================================================
+            // API Configuration
+            // ============================================================
+            var API_BASE = '';
+            if (window.location.port && window.location.port !== '8005') {
+                API_BASE = window.location.protocol + '//' + window.location.hostname + ':8005';
+            }
+
+            var currentMap = L.map('map', { maxZoom: 23 }).setView([-7.275, 112.794], 13);
+            L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                maxZoom: 23, maxNativeZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(currentMap);
+
+            var currentOverlay = null;
+            var segmentOverlay = null;
+            var petakLayerGroup = L.featureGroup();
+            var currentUploadId = null;
+            var currentLayerKey = null;
+            var currentUploadData = null;
+
+            // ============================================================
+            // Load Saved Uploads List
+            // ============================================================
+
+            function escapeHtml(str) {
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            function loadSavedUploads() {
+                fetch('/api/multispektral/uploads')
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        var list = document.getElementById('sidebarList');
+
+                        if (!data || data.length === 0) {
+                            list.innerHTML = '<div class="empty-state">' +
+                                '<i class="fas fa-inbox" style="font-size:24px; margin-bottom:8px; display:block;"></i>' +
+                                'No data yet.<br><a href="/upload.html" style="color:#2563eb;">Upload now</a>' +
+                                '</div>';
+                            return;
+                        }
+
+                        var html = '';
+                        data.forEach(function (item) {
+                            var layerKeys = Object.keys(item.layers || {}).filter(function (k) { return k !== 'segmentasi'; });
+                            var badges = '';
+
+                            if (item.type === 'orthomosaic') {
+                                badges += '<span class="badge badge-rgb">RGB (Ortho)</span>';
+                            } else {
+                                badges += layerKeys.map(function (k) {
+                                    var cls = k === 'rgb' ? 'badge-rgb' : k === 'ndvi' ? 'badge-ndvi' : 'badge-ndre';
+                                    return '<span class="badge ' + cls + '">' + k.toUpperCase() + '</span>';
+                                }).join('');
+                            }
+
+                            if (item.info && item.info.total_petak > 0) {
+                                badges += '<span class="badge badge-petak">' + item.info.total_petak + ' plots</span>';
+                            }
+
+                            var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '';
+                            var lastOpenedStr = item.last_opened_at ? new Date(item.last_opened_at).toLocaleString('id-ID') : (item.type === 'orthomosaic' ? 'Orthomosaic RGB' : 'Never opened');
+                            var isActive = currentUploadId === item.id;
+
+                            html += '<div class="sidebar-item ' + (isActive ? 'active' : '') + '" onclick="loadUploadData(\'' + item.id + '\')">' +
+                                '<div style="display:flex; justify-content:space-between; align-items:start;">' +
+                                '<strong>' + (item.nama_lahan || 'Unnamed') + '</strong>' +
+                                (item.type === 'orthomosaic' ? '<i class="fas fa-image" style="color:#2563eb;"></i>' : '<i class="fas fa-layer-group" style="color:#059669;"></i>') +
+                                '</div>' +
+                                '<small>Created: ' + dateStr + '</small>' +
+                                '<small style="color:#059669;">' + (item.type === 'orthomosaic' ? 'Main Data' : 'Last opened: ' + lastOpenedStr) + '</small>' +
+                                '<div class="badges">' + badges + '</div>' +
+                                '</div>';
+                        });
+
+                        list.innerHTML = html;
+
+                        // Auto-load from URL param or first item
+                        var urlParams = new URLSearchParams(window.location.search);
+                        var targetId = urlParams.get('upload_id');
+
+                        if (targetId) {
+                            loadUploadData(targetId);
+                        } else if (data.length > 0 && !currentUploadId) {
+                            loadUploadData(data[0].id);
+                        }
+                    })
+                    .catch(function (err) {
+                        console.error('Error loading uploads:', err);
+                        document.getElementById('sidebarList').innerHTML = '<div class="empty-state" style="color:#dc2626;">Gagal memuat data</div>';
+                    });
+            }
+
+            // ============================================================
+            // Load & Display Upload Data on Map
+            // ============================================================
+            function loadUploadData(uploadId) {
+                currentUploadId = uploadId;
+
+                fetch('/api/multispektral/uploads/' + uploadId)
+                    .then(function (res) {
+                        if (!res.ok) throw new Error('Data not found');
+                        return res.json();
+                    })
+                    .then(function (data) {
+                        currentUploadData = data;
+
+                        // Fix image URLs to include API_BASE
+                        var layers = data.layers;
+                        Object.keys(layers).forEach(function (key) {
+                            if (layers[key].url && API_BASE && layers[key].url.indexOf('http') !== 0) {
+                                layers[key].url = API_BASE + layers[key].url;
+                            }
+                        });
+
+                        // Update sidebar active state
+                        document.querySelectorAll('.sidebar-item').forEach(function (el) { el.classList.remove('active'); });
+                        // Find and activate the clicked item
+                        var items = document.querySelectorAll('.sidebar-item');
+                        items.forEach(function (el) {
+                            if (el.onclick && el.onclick.toString().indexOf(uploadId) !== -1) {
+                                el.classList.add('active');
+                            }
+                        });
+
+                        // Build layer buttons
+                        var layerBtns = document.getElementById('layerButtons');
+                        layerBtns.innerHTML = '';
+                        var layerKeys = Object.keys(layers).filter(function (k) { return k !== 'segmentasi'; });
+
+                        layerKeys.forEach(function (key) {
+                            var btn = document.createElement('button');
+                            btn.className = 'layer-btn';
+                            btn.id = 'lbtn-' + key;
+                            var icon = key === 'rgb' ? '' : key === 'ndvi' ? '' : '';
+                            btn.innerHTML = icon + ' ' + key.toUpperCase();
+                            btn.onclick = function () { switchLayer(key); };
+                            layerBtns.appendChild(btn);
+                        });
+
+                        document.getElementById('layerControl').style.display = 'block';
+
+                        // Auto-select first layer
+                        if (layerKeys.length > 0) {
+                            switchLayer(layerKeys[0]);
+                        }
+
+                        // Update info panel
+                        var infoHtml = '<strong>' + (data.nama_lahan || 'Unnamed') + '</strong><br>';
+                        infoHtml += '<small>Layer: ' + layerKeys.join(', ').toUpperCase() + '</small>';
+                        if (data.info && data.info.total_petak > 0) {
+                            infoHtml += '<br><small> ' + data.info.total_petak + ' plots | ' + (data.info.total_luas / 10000).toFixed(4) + ' Ha</small>';
+                        }
+                        document.getElementById('infoContent').innerHTML = infoHtml;
+
+                        // Refresh sidebar active state
+
+                        var urlParams = new URLSearchParams(window.location.search);
+                        var petakId = urlParams.get('petak_id');
+                        if (petakId) {
+                            focusOnPetak(petakId);
+                        }
+
+                        document.querySelectorAll(".sidebar-item").forEach(function (el) {
+                            el.classList.remove("active");
+                            if (el.getAttribute("onclick") && el.getAttribute("onclick").indexOf(uploadId) !== -1) {
+                                el.classList.add("active");
+                            }
+                        });
+                    })
+                    .catch(function (err) {
+                        console.error('Error loading upload:', err);
+                        document.getElementById('infoContent').innerHTML = '<span style="color:#dc2626;">Error: ' + err.message + '</span>';
+                    });
+            }
+
+            // ============================================================
+            // Switch Layer
+            // ============================================================
+            function switchLayer(key) {
+                if (!currentUploadData || !currentUploadData.layers[key]) return;
+
+                if (currentOverlay) currentMap.removeLayer(currentOverlay);
+
+                var layerData = currentUploadData.layers[key];
+                currentLayerKey = key;
+
+                if (layerData.has_tiles && layerData.tiles_url) {
+                    var tileUrl = layerData.tiles_url.startsWith('http') ? layerData.tiles_url : API_BASE + layerData.tiles_url;
+                    currentOverlay = L.tileLayer(tileUrl, {
+                        maxZoom: 23, maxNativeZoom: 20,
+                        zIndex: 10,
+                        opacity: 0.9
+                    }).addTo(currentMap);
+                    console.log('Using TileLayer for faster display:', tileUrl);
+                } else {
+                    currentOverlay = L.imageOverlay(layerData.url, layerData.bounds, {
+                        zIndex: 10,
+                        opacity: 0.9
+                    }).addTo(currentMap);
+                    console.log('Using ImageOverlay (Standard):', layerData.url);
+                }
+
+                currentMap.fitBounds(layerData.bounds);
+
+                // Update active button
+                document.querySelectorAll('.layer-btn').forEach(function (b) { b.classList.remove('active'); });
+                var activeBtn = document.getElementById('lbtn-' + key);
+                if (activeBtn) activeBtn.classList.add('active');
+
+                // Show/hide legend
+                var legend = document.getElementById('legend');
+                if (key === 'ndvi' || key === 'ndre') {
+                    legend.style.display = 'block';
+                    legend.querySelector('.legend-title').textContent = ' ' + key.toUpperCase() + ' Legend';
+                } else {
+                    legend.style.display = 'none';
+                }
+
+                if (segmentOverlay) segmentOverlay.bringToFront();
+
+                // Refresh segmentation to update popups with correct layer recommendation
+                if (document.getElementById('checkSeg').checked) {
+                    renderParcels();
+                }
+            }
+
+            // ============================================================
+            // Toggle Segmentation Overlay
+            // ============================================================
+
+            function toggleSegmentation() {
+                var isChecked = document.getElementById('checkSeg').checked;
+                var segInfo = document.getElementById('segInfo');
+
+                if (isChecked) {
+                    if (!currentUploadData || !currentUploadData.info || !currentUploadData.info.petak_list) {
+                        alert('Plot detection data is not available for this upload.');
+                        document.getElementById('checkSeg').checked = false;
+                        return;
+                    }
+                    renderParcels();
+                    segInfo.style.display = 'block';
+                    segInfo.innerHTML = '<span style="color:#16a34a;"><i class="fas fa-check-circle"></i> ' + currentUploadData.info.total_petak + ' active plots</span>';
+                } else {
+                    petakLayerGroup.clearLayers();
+                    segInfo.style.display = 'none';
+                }
+            }
+
+            function renderParcels() {
+                if (!currentUploadData || !currentUploadData.info || !currentUploadData.info.petak_list) return;
+                petakLayerGroup.clearLayers();
+                currentUploadData.info.petak_list.forEach(function (petak) {
+                    var poly = L.polygon(petak.polygon, {
+                        color: '#16a34a',
+                        weight: 2,
+                        fillOpacity: 0.15,
+                        dashArray: '5, 5'
+                    });
+
+                    var rec = petak.lcc_rec;
+                    var recType = "LCC";
+                    if (currentLayerKey === 'ndvi') {
+                        rec = petak.ndvi_rec;
+                        recType = "NDVI";
+                    } else if (currentLayerKey === 'ndre') {
+                        rec = petak.ndre_rec;
+                        recType = "NDRE";
+                    }
+
+                    var rangeArr = rec.split('-').map(Number);
+                    var pupukTotal = "";
+                    if (rangeArr.length === 2) {
+                        var sorted = [...rangeArr].sort((a, b) => a - b);
+                        var low = (sorted[0] * petak.luas_ha).toFixed(2);
+                        var high = (sorted[1] * petak.luas_ha).toFixed(2);
+                        pupukTotal = low + " - " + high + " kg N";
+                    }
+
+                    var lccColor = "";
+                    if (petak.lcc_scale == 5) lccColor = "#385a28";
+                    if (petak.lcc_scale == 4) lccColor = "#466929";
+                    if (petak.lcc_scale == 3) lccColor = "#578836";
+                    if (petak.lcc_scale == 2) lccColor = "#70a732";
+
+                    var lccHtml = currentLayerKey === 'rgb' ? `
+                        <div style="margin-bottom:5px;">
+                            <b>Scale LCC:</b> ${petak.lcc_scale} 
+                            <span style="display:inline-block; width:15px; height:15px; background-color:${lccColor}; border:1px solid #000; vertical-align:middle;"></span>
+                        </div>` : '';
+
+                    var popupHtml = `
+                        <div style="min-width: 200px; font-family: 'Segoe UI', sans-serif;">
+                            <h4 style="margin-bottom:8px; color:#1a472a; border-bottom: 2px solid #4caf50; padding-bottom:4px;">
+                                <i class="fas fa-leaf"></i> Rice Field Plot Info (${recType})
+                            </h4>
+                            <div style="margin-bottom:8px;">
+                                <b>Name:</b> 
+                                <div class="d-flex gap-1 mt-1">
+                                    <input type="text" id="input_nama_${escapeHtml(petak.id)}" value="${escapeHtml(petak.nama)}" style="width:110px; padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                                    <button onclick="renamePetak('${currentUploadData.id}', '${escapeHtml(petak.id)}')" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:5px; font-size:12px;"><b>Area:</b> ${petak.luas_ha} Ha</div>
+                            ${lccHtml}
+                            <div style="margin-bottom:5px; font-size:12px;"><b>Recommendation (${recType}):</b><br>${rec} kg N/ha</div>
+                            <div style="margin-bottom:10px; color:#b91c1c; font-size:12px;"><b>Requirement for this Plot:</b><br><strong>${pupukTotal}</strong></div>
+                            <hr style="margin: 8px 0; border:0; border-top:1px solid #eee;">
+                            <button onclick="deletePetak('${currentUploadData.id}', '${escapeHtml(petak.id)}')" style="background:#dc2626; color:white; border:none; padding:6px; border-radius:4px; cursor:pointer; width:100%; font-size:11px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                                <i class="fas fa-trash"></i> Delete Plot
+                            </button>
+                        </div>
+                    `;
+                    poly.bindPopup(popupHtml);
+
+                    poly.on('mouseover', function (e) { this.setStyle({ fillOpacity: 0.4, weight: 3 }); });
+                    poly.on('mouseout', function (e) { this.setStyle({ fillOpacity: 0.15, weight: 2 }); });
+
+                    petakLayerGroup.addLayer(poly);
+                });
+                petakLayerGroup.addTo(currentMap);
+            }
+
+            function renamePetak(uploadId, petakId) {
+                var newName = document.getElementById('input_nama_' + petakId).value;
+                var formData = new FormData();
+                formData.append('upload_id', uploadId);
+                formData.append('petak_id', petakId);
+                formData.append('nama_baru', newName);
+
+                fetch('/api/multispektral/petak/rename', {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json()).then(data => {
+                    if (data.success) {
+                        alert('Plot name successfully changed!');
+                        var petak = currentUploadData.info.petak_list.find(p => p.id === petakId);
+                        if (petak) petak.nama = newName;
+                    } else {
+                        alert('Failed to change name: ' + data.message);
+                    }
+                }).catch(err => {
+                    alert('Error: ' + err.message);
+                });
+            }
+
+            function deletePetak(uploadId, petakId) {
+                if (!confirm('Delete this Plot permanently from the database?')) return;
+
+                var formData = new FormData();
+                formData.append('upload_id', uploadId);
+                formData.append('petak_id', petakId);
+
+                fetch('/api/multispektral/petak/delete', {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json()).then(data => {
+                    if (data.success) {
+                        alert('Plot successfully deleted!');
+                        // Refresh data
+                        loadUploadData(uploadId);
+                    } else {
+                        alert('Failed to delete Plot: ' + data.message);
+                    }
+                }).catch(err => {
+                    alert('Error: ' + err.message);
+                });
+            }
+
+            // ============================================================
+            // Auto-focus on Petak if ID is provided
+            // ============================================================
+            function focusOnPetak(petakId) {
+                if (!currentUploadData || !currentUploadData.info || !currentUploadData.info.petak_list) return;
+
+                // Aktifkan segmentasi jika belum
+                if (!document.getElementById('checkSeg').checked) {
+                    document.getElementById('checkSeg').checked = true;
+                    toggleSegmentation();
+                }
+
+                // Find Plot in layer group
+                petakLayerGroup.eachLayer(function (layer) {
+                    if (layer.getPopup().getContent().indexOf('input_nama_' + petakId) !== -1) {
+                        layer.openPopup();
+                        currentMap.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                    }
+                });
+            }
+
+            // ============================================================
+            // Init
+            // ============================================================
+            loadSavedUploads();
+
+
+        </script>
+</body>
+
+</html>

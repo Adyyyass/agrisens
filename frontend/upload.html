@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Multispectral Upload - Agrisens</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+        }
+
+        .navbar {
+            background: #1a472a;
+            color: white;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.3rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+
+        .navbar a:hover {
+            color: #4ade80;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .upload-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .upload-card h3 {
+            color: #1a472a;
+            margin-bottom: 12px;
+        }
+
+        .upload-form {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .file-group {
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+            gap: 4px;
+        }
+
+        .file-group label {
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .file-group input[type="text"] {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+
+        .file-group input[type="file"] {
+            font-size: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #15803d;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-view {
+            background: #7c3aed;
+            color: white;
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+
+        .btn-view:hover {
+            background: #6d28d9;
+        }
+
+        #statusMsg {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: none;
+        }
+
+        #statusMsg.show {
+            display: block;
+        }
+
+        #statusMsg.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        #statusMsg.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        #statusMsg.info {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .save-section {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            border: 1px solid #bbf7d0;
+        }
+
+        .save-section.show {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-container {
+            position: relative;
+        }
+
+        .layer-control {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .layer-control p {
+            color: white;
+            margin: 0 0 8px 0;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .layer-control button {
+            display: block;
+            width: 130px;
+            margin: 4px 0;
+            padding: 8px;
+            background: #374151;
+            color: white;
+            border: 1px solid #4b5563;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .layer-control button:hover {
+            background: #4b5563;
+        }
+
+        .layer-control button.active {
+            background: #16a34a;
+            border-color: #4ade80;
+        }
+
+        .layer-control hr {
+            border: 0;
+            border-top: 1px solid #4b5563;
+            margin: 8px 0;
+        }
+
+        /* History section */
+        .history-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .history-header {
+            background: #1a472a;
+            color: white;
+            padding: 12px 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f0fdf4;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-info strong {
+            font-size: 14px;
+            color: #1f2937;
+        }
+
+        .history-info small {
+            display: block;
+            font-size: 11px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 4px;
+        }
+
+        .badge-layer {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-parcels {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .empty-state {
+            padding: 30px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <div class="logo"><i class="fas fa-seedling"></i> Agrisens - Upload</div>
+        <div>
+            <a href="/dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/upload.html" class="active" style="color: #4ade80;"><i class="fas fa-cloud-upload-alt"></i> Upload</a>
+            <a href="/manage.html"><i class="fas fa-database"></i> Management</a>
+            <a href="/peta_multispektral.html"><i class="fas fa-map"></i> Map</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Upload Card -->
+        <div class="upload-card">
+            <h3><i class="fas fa-upload"></i> Upload Multispectral Data</h3>
+            <div class="upload-form">
+                <div class="file-group">
+                    <label>Field Name</label>
+                    <input type="text" id="namaLahan" placeholder="Rice Field 1">
+                </div>
+                <div class="file-group">
+                    <label>RGB File (.tif) <span id="sizeRGB" style="font-size:11px;color:#666;margin-left:10px;"></span></label>
+                    <input type="file" id="fileRGB" accept=".tif,.tiff">
+                </div>
+                <div class="file-group">
+                    <label>NDVI File (.tif) <span id="sizeNDVI" style="font-size:11px;color:#666;margin-left:10px;"></span></label>
+                    <input type="file" id="fileNDVI" accept=".tif,.tiff">
+                </div>
+                <div class="file-group">
+                    <label>NDRE File (.tif) <span id="sizeNDRE" style="font-size:11px;color:#666;margin-left:10px;"></span></label>
+                    <input type="file" id="fileNDRE" accept=".tif,.tiff">
+                </div>
+                <button id="btnUpload" class="btn btn-primary" onclick="uploadLayers()">
+                    <i class="fas fa-cogs"></i> PROCESS ALL LAYERS
+                </button>
+            </div>
+
+            <div id="statusMsg"></div>
+
+            <!-- Save to DB section (appears after processing) -->
+            <div id="saveSection" class="save-section">
+                <i class="fas fa-database" style="color: #16a34a; font-size: 18px;"></i>
+                <span style="font-weight: 600; color: #166534;">Data ready to be saved to database</span>
+                <button id="btnSave" class="btn btn-success" onclick="saveToDatabase()">
+                    <i class="fas fa-save"></i> SAVE TO DATABASE
+                </button>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="upload-card">
+            <h3><i class="fas fa-map"></i> Map Preview</h3>
+            <div class="map-container">
+                <div id="map"></div>
+                <div id="layerMenu" class="layer-control">
+                    <p><i class="fas fa-layer-group"></i> MAIN LAYER:</p>
+                    <div id="buttonContainer"></div>
+                    <hr>
+                    <label style="color: #00ff00; font-size: 12px; cursor: pointer;">
+                        <input type="checkbox" id="checkSeg" onchange="toggleSegmentation()"> Parcel Detection
+                    </label>
+                    <div id="infoBox"
+                        style="color: white; font-size: 11px; margin-top: 8px; display: none; background: #1f2937; padding: 8px; border-radius: 6px;">
+                        <p>Total Parcels: <span id="valMapk">0</span></p>
+                        <p>Total Area: <span id="valArea">0</span> Ha</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved History -->
+        <div class="history-card">
+            <div class="history-header">
+                <i class="fas fa-database"></i> Data Saved in Database
+            </div>
+            <div id="historyList" class="history-list">
+                <div class="empty-state"><i class="fas fa-spinner fa-pulse"></i> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ============================================================
+        // API Configuration
+        // ============================================================
+        var API_BASE = '';
+        if (window.location.port && window.location.port !== '8005') {
+            API_BASE = window.location.protocol + '//' + window.location.hostname + ':8005';
+        }
+
+        var map = L.map('map', { maxZoom: 23 }).setView([-7.275, 112.794], 13);
+        L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 23, maxNativeZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        }).addTo(map);
+
+        var activeLayers = {};
+        var currentOverlay = null;
+        var segmentOverlay = null;
+        var petakLayerGroup = L.featureGroup();
+        var detectionInfo = null;
+        var lastUploadId = null;
+        var lastNamaLahan = null;
+        var currentLayerKey = 'rgb';
+
+        // ============================================================
+        // Status Messages
+        // ============================================================
+        
+        function escapeHtml(str) { 
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); 
+        }
+
+        function setStatus(msg, type) {
+            var el = document.getElementById('statusMsg');
+            el.textContent = msg;
+            el.className = 'show ' + type;
+        }
+
+        function hideStatus() {
+            document.getElementById('statusMsg').className = '';
+        }
+
+        // ============================================================
+        // Upload & Process
+        // ============================================================
+        // ============================================================
+        // Chunked Upload Helper
+        // ============================================================
+        async function uploadFileInChunks(file, layerType, uploadId) {
+            const chunkSize = 1024 * 1024; // 1MB chunks
+            const totalChunks = Math.ceil(file.size / chunkSize);
+
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * chunkSize;
+                const end = Math.min(start + chunkSize, file.size);
+                const chunk = file.slice(start, end);
+
+                const formData = new FormData();
+                formData.append('upload_id', uploadId);
+                formData.append('layer_type', layerType);
+                formData.append('chunk_index', i);
+                formData.append('total_chunks', totalChunks);
+                formData.append('file', chunk, file.name);
+
+                setStatus(` Uploading ${layerType.toUpperCase()}: Part ${i + 1}/${totalChunks}...`, 'info');
+
+                const response = await fetch(API_BASE + '/api/upload/chunk', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to upload chunk ${i} untuk ${layerType}`);
+                }
+            }
+        }
+
+        // ============================================================
+        // Upload & Process
+        // ============================================================
+        
+        function formatBytes(bytes) {
+            if(bytes === 0) return '0 Bytes';
+            var k = 1024, dm = 2, sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            var i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        document.getElementById('fileRGB').addEventListener('change', function(e) {
+            document.getElementById('sizeRGB').textContent = this.files[0] ? formatBytes(this.files[0].size) : '';
+        });
+        document.getElementById('fileNDVI').addEventListener('change', function(e) {
+            document.getElementById('sizeNDVI').textContent = this.files[0] ? formatBytes(this.files[0].size) : '';
+        });
+        document.getElementById('fileNDRE').addEventListener('change', function(e) {
+            document.getElementById('sizeNDRE').textContent = this.files[0] ? formatBytes(this.files[0].size) : '';
+        });
+
+        async function uploadLayers() {
+            var namaLahan = document.getElementById('namaLahan').value || 'Lahan Unnamed';
+            var rgb = document.getElementById('fileRGB').files[0];
+            var ndvi = document.getElementById('fileNDVI').files[0];
+            var ndre = document.getElementById('fileNDRE').files[0];
+
+            
+            var maxFileSize = 500 * 1024 * 1024; // 500MB
+            if (rgb && rgb.size > maxFileSize) { alert("RGB file size exceeds 500MB limit!"); return; }
+            if (ndvi && ndvi.size > maxFileSize) { alert("NDVI file size exceeds 500MB limit!"); return; }
+            if (ndre && ndre.size > maxFileSize) { alert("NDRE file size exceeds 500MB limit!"); return; }
+
+            if (!rgb && !ndvi && !ndre) {
+                alert("Select at least one file to upload!");
+                return;
+            }
+
+            var btn = document.getElementById('btnUpload');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> UPLOADING & PROCESSING...';
+            setStatus(' Starting chunked upload...', 'info');
+            document.getElementById('saveSection').className = 'save-section';
+
+            const uploadId = Math.random().toString(36).substring(2, 10);
+            const layersToProcess = [];
+
+            try {
+                if (rgb) {
+                    await uploadFileInChunks(rgb, 'rgb', uploadId);
+                    layersToProcess.push('rgb');
+                }
+                if (ndvi) {
+                    await uploadFileInChunks(ndvi, 'ndvi', uploadId);
+                    layersToProcess.push('ndvi');
+                }
+                if (ndre) {
+                    await uploadFileInChunks(ndre, 'ndre', uploadId);
+                    layersToProcess.push('ndre');
+                }
+
+                setStatus(' All chunks uploaded. Processing images on server...', 'info');
+
+                const finalizeFormData = new FormData();
+                finalizeFormData.append('upload_id', uploadId);
+                finalizeFormData.append('nama_lahan', namaLahan);
+                finalizeFormData.append('layers', JSON.stringify(layersToProcess));
+
+                const finalizeRes = await fetch(API_BASE + '/api/upload/finalize-chunks', {
+                    method: 'POST',
+                    body: finalizeFormData
+                });
+
+                if (!finalizeRes.ok) throw new Error('Server error during finalization: ' + finalizeRes.status);
+                
+                const data = await finalizeRes.json();
+                
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cogs"></i> PROCESS ALL LAYERS';
+
+                if (data.status === 'success') {
+                    // Fix image URLs
+                    var layers = data.layers;
+                    Object.keys(layers).forEach(function (key) {
+                        if (layers[key].url && API_BASE) {
+                            layers[key].url = API_BASE + layers[key].url;
+                        }
+                    });
+
+                    activeLayers = layers;
+                    detectionInfo = data.info;
+                    lastUploadId = data.upload_id;
+                    lastNamaLahan = namaLahan;
+
+                    updateLayerMenu();
+
+                    var availableTags = Object.keys(activeLayers).filter(function (t) { return t !== 'segmentasi'; });
+                    if (availableTags.length > 0) {
+                        switchLayer(availableTags[0]);
+                    }
+                    setStatus(' ' + data.message + ' - Klik "Save ke Database" untuk menyimpan.', 'success');
+
+                    // Show save button
+                    document.getElementById('saveSection').className = 'save-section show';
+                } else {
+                    setStatus(' ' + (data.message || 'An error occurred'), 'error');
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cogs"></i> PROCESS ALL LAYERS';
+                console.error("Error uploading:", err);
+                setStatus(' Failed to process: ' + err.message, 'error');
+            }
+        }
+
+        // ============================================================
+        // Save to Database
+        // ============================================================
+        function saveToDatabase() {
+            if (!lastUploadId || !activeLayers) {
+                alert('No data to save. Upload files first.');
+                return;
+            }
+
+            var btn = document.getElementById('btnSave');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> SAVING...';
+
+            var formData = new FormData();
+            formData.append('upload_id', lastUploadId);
+            formData.append('nama_lahan', lastNamaLahan || 'Lahan Unnamed');
+
+            // Strip API_BASE from URLs before saving (store relative paths)
+            var layersToSave = JSON.parse(JSON.stringify(activeLayers));
+            Object.keys(layersToSave).forEach(function (key) {
+                if (layersToSave[key].url && API_BASE) {
+                    layersToSave[key].url = layersToSave[key].url.replace(API_BASE, '');
+                }
+            });
+
+            formData.append('layers_json', JSON.stringify(layersToSave));
+            formData.append('info_json', JSON.stringify(detectionInfo || {}));
+
+            fetch(API_BASE + '/api/multispektral/save', { method: 'POST', body: formData })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('Server error: ' + res.status);
+                    return res.json();
+                })
+                .then(function (data) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save"></i> SAVE TO DATABASE';
+
+                    if (data.success) {
+                        setStatus(' ' + data.message, 'success');
+                        document.getElementById('saveSection').className = 'save-section';
+                        loadHistory();
+                    } else {
+                        setStatus(' Failed to save', 'error');
+                    }
+                })
+                .catch(function (err) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save"></i> SAVE TO DATABASE';
+                    setStatus(' Failed to save: ' + err.message, 'error');
+                });
+        }
+
+        // ============================================================
+        // Load History from Database
+        // ============================================================
+        function loadHistory() {
+            fetch(API_BASE + '/api/multispektral/uploads')
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    var list = document.getElementById('historyList');
+
+                    if (!data || data.length === 0) {
+                        list.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i> No data saved yet</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    data.forEach(function (item) {
+                        var layerKeys = Object.keys(item.layers || {}).filter(function (k) { return k !== 'segmentasi'; });
+                        var layerBadges = layerKeys.map(function (k) {
+                            return '<span class="badge badge-layer">' + k.toUpperCase() + '</span>';
+                        }).join('');
+
+                        var infoBadge = '';
+                        if (item.info && item.info.total_petak > 0) {
+                            infoBadge = '<span class="badge badge-parcels"> ' + item.info.total_petak + ' parcels</span>';
+                        }
+
+                        var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('id-ID') : '-';
+
+                        html += '<div class="history-item">' +
+                            '<div class="history-info">' +
+                            '<strong>' + (item.nama_lahan || 'Unnamed') + '</strong>' +
+                            '<small>' + dateStr + ' | ID: ' + item.id + '</small>' +
+                            '<div style="margin-top:4px;">' + layerBadges + infoBadge + '</div>' +
+                            '</div>' +
+                            '<div class="history-actions">' +
+                            '<button class="btn btn-view" onclick="viewOnMap(\'' + item.id + '\')">' +
+                            '<i class="fas fa-map"></i> Map' +
+                            '</button>' +
+                            '<button class="btn btn-danger" onclick="deleteUpload(\'' + item.id + '\', \'' + (item.nama_lahan || '') + '\')">' +
+                            '<i class="fas fa-trash"></i>' +
+                            '</button>' +
+                            '</div>' +
+                            '</div>';
+                    });
+
+                    list.innerHTML = html;
+                })
+                .catch(function (err) {
+                    console.error('Error loading history:', err);
+                    document.getElementById('historyList').innerHTML = '<div class="empty-state" style="color:#dc2626;">Gagal memuat data</div>';
+                });
+        }
+
+        function viewOnMap(uploadId) {
+            window.location.href = '/peta_multispektral.html?upload_id=' + uploadId;
+        }
+
+        function deleteUpload(uploadId, namaLahan) {
+            if (!confirm('Delete data "' + namaLahan + '"?')) return;
+
+            fetch(API_BASE + '/api/multispektral/uploads/' + uploadId, { method: 'DELETE' })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        setStatus(' Data successfully deleted', 'success');
+                        loadHistory();
+                    }
+                })
+                .catch(function (err) {
+                    setStatus(' Failed to delete: ' + err.message, 'error');
+                });
+        }
+
+        // ============================================================
+        // Map Layer Controls
+        // ============================================================
+        function updateLayerMenu() {
+            var container = document.getElementById('buttonContainer');
+            var menu = document.getElementById('layerMenu');
+            container.innerHTML = '';
+            menu.style.display = 'block';
+
+            Object.keys(activeLayers).forEach(function (key) {
+                if (key !== 'segmentasi') {
+                    var btn = document.createElement('button');
+                    btn.innerText = key.toUpperCase();
+                    btn.onclick = function () { switchLayer(key); };
+                    btn.id = 'btn-' + key;
+                    container.appendChild(btn);
+                }
+            });
+        }
+
+        function switchLayer(key) {
+            if (currentOverlay) map.removeLayer(currentOverlay);
+
+            var layerData = activeLayers[key];
+            currentLayerKey = key;
+            currentOverlay = L.imageOverlay(layerData.url, layerData.bounds, {
+                zIndex: 10
+            }).addTo(map);
+
+            map.fitBounds(layerData.bounds);
+
+            document.querySelectorAll('.layer-control button').forEach(function (b) { b.classList.remove('active'); });
+            var activeBtn = document.getElementById('btn-' + key);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (segmentOverlay) segmentOverlay.bringToFront();
+            
+            if (document.getElementById("checkSeg").checked) {
+                renderParcels();
+            }
+        }
+
+        
+        function toggleSegmentation() {
+            var isChecked = document.getElementById("checkSeg").checked;
+            var infoBox = document.getElementById("infoBox");
+
+            if (isChecked) {
+                if (!activeLayers['segmentasi']) return alert("Segmentation data not found!");
+                renderParcels();
+                infoBox.style.display = "block";
+            } else {
+                if (segmentOverlay) { map.removeLayer(segmentOverlay); segmentOverlay = null; }
+                petakLayerGroup.clearLayers();
+                infoBox.style.display = "none";
+            }
+        }
+
+        function renderParcels() {
+            if (segmentOverlay) { map.removeLayer(segmentOverlay); segmentOverlay = null; }
+            segmentOverlay = L.imageOverlay(activeLayers['segmentasi'].url, activeLayers['segmentasi'].bounds, {
+                zIndex: 1000,
+                interactive: false
+            }).addTo(map);
+            
+            if (detectionInfo && detectionInfo.petak_list) {
+                petakLayerGroup.clearLayers();
+                detectionInfo.petak_list.forEach(function(petak) {
+                    var poly = L.polygon(petak.polygon, {
+                        color: '#16a34a',
+                        weight: 2,
+                        fillOpacity: 0.1
+                    });
+                    
+                    var rec = petak.lcc_rec;
+                    var recType = "LCC";
+                    if(currentLayerKey === 'ndvi') {
+                        rec = petak.ndvi_rec;
+                        recType = "NDVI";
+                    } else if(currentLayerKey === 'ndre') {
+                        rec = petak.ndre_rec;
+                        recType = "NDRE";
+                    }
+
+                    var rangeArr = rec.split('-').map(Number);
+                    var pupukTotal = "";
+                    if(rangeArr.length === 2) {
+                        var sorted = [...rangeArr].sort((a,b)=>a-b);
+                        var low = (sorted[0] * petak.luas_ha).toFixed(2);
+                        var high = (sorted[1] * petak.luas_ha).toFixed(2);
+                        pupukTotal = low + " - " + high + " kg N";
+                    }
+                    
+                    var lccColor = "";
+                    if(petak.lcc_scale == 5) lccColor = "#385a28";
+                    if(petak.lcc_scale == 4) lccColor = "#466929";
+                    if(petak.lcc_scale == 3) lccColor = "#578836";
+                    if(petak.lcc_scale == 2) lccColor = "#70a732";
+                    
+                    var lccHtml = currentLayerKey === 'rgb' ? `
+                        <div style="margin-bottom:5px;">
+                            <b>LCC Scale:</b> ${petak.lcc_scale} 
+                            <span style="display:inline-block; width:15px; height:15px; background-color:${lccColor}; border:1px solid #000; vertical-align:middle;"></span>
+                        </div>` : '';
+
+                    var popupHtml = `
+                        <div style="min-width: 180px; font-family: 'Segoe UI', sans-serif;">
+                            <h4 style="margin-bottom:8px; color:#1a472a; border-bottom: 2px solid #4caf50; padding-bottom:4px;">
+                                <i class="fas fa-leaf"></i> Parcel Info (${recType})
+                            </h4>
+                            <div style="margin-bottom:8px;">
+                                <b>Name:</b> 
+                                <div class="d-flex gap-1 mt-1">
+                                    <input type="text" id="input_nama_${escapeHtml(petak.id)}" value="${escapeHtml(petak.nama)}" style="width:100px; padding:2px; border:1px solid #ccc; border-radius:4px;">
+                                    <button onclick="renamePetakLocal('${escapeHtml(petak.id)}')" style="background:#2563eb; color:white; border:none; padding:2px 8px; border-radius:4px; cursor:pointer;">Save</button>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:5px;"><b>Area:</b> ${petak.luas_ha} Ha (${petak.luas_m2} m2)</div>
+                            ${lccHtml}
+                            <div style="margin-bottom:5px;"><b>Recommendation (${recType}):</b><br>${rec} kg N/ha</div>
+                            <div style="margin-bottom:10px; color:#b91c1c;"><b>Requirement for this Parcel:</b><br><strong>${pupukTotal}</strong></div>
+                        </div>
+                    `;
+                    poly.bindPopup(popupHtml);
+                    petakLayerGroup.addLayer(poly);
+                });
+                petakLayerGroup.addTo(map);
+            }
+        }
+        
+        function renamePetakLocal(petakId) {
+            if (!detectionInfo || !detectionInfo.petak_list) return;
+            var newName = document.getElementById('input_nama_' + petakId).value;
+            var petak = detectionInfo.petak_list.find(p => String(p.id) === String(petakId));
+            if(petak) {
+                petak.nama = newName;
+                alert("Parcel name updated. Don't forget to click 'Save to Database' to save permanently.");
+            }
+        }
+
+        // ============================================================
+        // Init
+        // ============================================================
+        loadHistory();
+    </script>
+</body>
+
+</html>

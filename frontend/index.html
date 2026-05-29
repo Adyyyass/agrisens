@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrisens WebGIS - Agricultural Land Monitoring System</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a2e1c 0%, #1a472a 50%, #0d3b1f 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: rgba(10, 46, 28, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i { font-size: 1.8rem; color: #4ade80; }
+        .logo span { color: #4ade80; }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover { color: #4ade80; }
+        
+        .btn-outline {
+            border: 2px solid #4ade80;
+            background: transparent;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline:hover {
+            background: #4ade80;
+            color: #0a2e1c;
+        }
+        
+        .btn-primary {
+            background: #4ade80;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            color: #0a2e1c;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #22c55e;
+            transform: translateY(-2px);
+        }
+        
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 0 5%;
+            position: relative;
+        }
+        
+        .hero-content {
+            flex: 1;
+            z-index: 1;
+        }
+        
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero-content .highlight { color: #4ade80; }
+        
+        .hero-content p {
+            font-size: 1.2rem;
+            color: #d1d5db;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+        
+        .hero-buttons { display: flex; gap: 1rem; }
+        
+        .hero-image {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+        }
+        
+        .hero-image img {
+            max-width: 100%;
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: heroFloat 4s ease-in-out infinite;
+            border: 2px solid rgba(74, 222, 128, 0.4);
+        }
+
+        .floating-element {
+            position: absolute;
+            background: rgba(10, 46, 28, 0.85);
+            backdrop-filter: blur(8px);
+            padding: 12px 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+            animation: floatUpDown 5s ease-in-out infinite;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .float-1 { top: 10%; right: -20px; animation-delay: 0s; }
+        .float-2 { bottom: 10%; left: -20px; animation-delay: 1.5s; }
+        .float-3 { top: 40%; left: -40px; animation-delay: 0.8s; }
+        
+        @keyframes heroFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(1deg); }
+        }
+
+        @keyframes floatUpDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        /* Features */
+        .features {
+            padding: 5rem 5%;
+            background: white;
+            color: #1f2937;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+        }
+        
+        .section-title span { color: #16a34a; }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .feature-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 20px;
+            background: #f9fafb;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #4ade80, #16a34a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .feature-icon i { font-size: 2.5rem; color: white; }
+        .feature-card h3 { margin-bottom: 1rem; }
+        .feature-card p { color: #6b7280; line-height: 1.6; }
+        
+        /* CTA */
+        .cta {
+            padding: 5rem 5%;
+            background: linear-gradient(135deg, #1a472a, #0a2e1c);
+            text-align: center;
+        }
+        
+        .cta h2 { font-size: 2rem; margin-bottom: 1rem; }
+        .cta p { margin-bottom: 2rem; color: #d1d5db; }
+        
+        /* Footer */
+        .footer {
+            padding: 2rem 5%;
+            background: #0a2e1c;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            color: #1f2937;
+        }
+        
+        .modal-content h3 { margin-bottom: 1.5rem; text-align: center; }
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-content button:hover { background: #15803d; }
+        .modal-link { text-align: center; margin-top: 1rem; color: #6b7280; }
+        .modal-link a { color: #16a34a; text-decoration: none; }
+        .close-modal { float: right; font-size: 1.5rem; cursor: pointer; }
+        
+        @media (max-width: 768px) {
+            .hero { flex-direction: column; text-align: center; padding-top: 100px; }
+            .hero-content h1 { font-size: 2rem; }
+            .hero-buttons { justify-content: center; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fas fa-seedling"></i>
+            Agrisens
+        </div>
+        <div class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#features">Features</a>
+            <a href="#about">About</a>
+            <button class="btn-outline" onclick="openModal('login')">Login</button>
+            <button class="btn-primary" onclick="openModal('register')">Register</button>
+        </div>
+    </nav>
+    
+    <section class="hero" id="home">
+        <div class="hero-content">
+            <h1>Precision Agricultural Land Monitoring with Drone & AI</h1>
+            <p>Monitor plant health, analyze NDVI, and get precise fertilization recommendations based on drone data and artificial intelligence.</p>
+            <div class="hero-buttons">
+                <button class="btn-primary btn-large" onclick="openModal('login')">Get Started</button>
+                <button class="btn-outline btn-large" onclick="scrollToFeatures()">Learn More</button>
+            </div>
+        </div>
+        <div class="hero-image">
+            <img src="/static/images/hero.png" alt="Agrisens Drone Farming">
+            
+            <div class="floating-element float-1">
+                <i class="fas fa-vial" style="color: #4ade80;"></i>
+                <span>AI Fertilizer Analysis</span>
+            </div>
+            <div class="floating-element float-2">
+                <i class="fas fa-helicopter" style="color: #4ade80;"></i>
+                <span>Drone Monitoring</span>
+            </div>
+            <div class="floating-element float-3">
+                <i class="fas fa-seedling" style="color: #4ade80;"></i>
+                <span>Land Optimization</span>
+            </div>
+        </div>
+    </section>
+    
+    <section class="features" id="features">
+        <h2 class="section-title">Features <span>Unggulan</span></h2>
+        <div class="features-grid">
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-map-marked-alt"></i></div><h3>Interactive Map</h3><p>Visualization of drone orthomosaic maps with zoom up to rice field details.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-chart-line"></i></div><h3>NDVI Analysis</h3><p>Plant health analysis based on NDVI vegetation index from multispectral data.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-robot"></i></div><h3>YOLO Detection</h3><p>Automatic detection of rice fields using YOLOv11 AI with high accuracy.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-flask"></i></div><h3>Fertilizer Recommendations</h3><p>Automatic fertilization recommendations based on NDVI values for each parcel.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-cloud-upload-alt"></i></div><h3>Upload Data</h3><p>Upload new orthomosaics and process automatically on the platform.</p></div>
+            <div class="feature-card"><div class="feature-icon"><i class="fas fa-database"></i></div><h3>Data Management</h3><p>Manage parcel data, NDVI history, and fertilization recommendations.</p></div>
+        </div>
+    </section>
+    
+    <section class="cta" id="about">
+        <h2>Ready to Increase Your Land Productivity?</h2>
+        <p>Join thousands of modern farmers who are already using our platform.</p>
+        <button class="btn-primary btn-large" onclick="openModal('register')">Register Now</button>
+    </section>
+    
+    <footer class="footer">
+        <p>&copy; 2025 Agrisens WebGIS. Powered by Drone Mapping, YOLOv11, and PostGIS.</p>
+    </footer>
+    
+    <!-- Modal Login -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('login')">&times;</span>
+            <h3> Login to Account</h3>
+            <form id="loginForm">
+                <input type="text" id="loginUsername" placeholder="Username or Email" required>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+            <div class="modal-link">Don't have an account? <a href="#" onclick="switchModal('register')">Register here</a></div>
+        </div>
+    </div>
+    
+    <!-- Modal Register -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('register')">&times;</span>
+            <h3> Register New Account</h3>
+            <form id="registerForm">
+                <input type="text" id="regFullName" placeholder="Full Name">
+                <input type="text" id="regUsername" placeholder="Username" required>
+                <input type="email" id="regEmail" placeholder="Email" required>
+                <input type="password" id="regPassword" placeholder="Password" required>
+                <button type="submit">Register</button>
+            </form>
+            <div class="modal-link">Already have an account? <a href="#" onclick="switchModal('login')">Login here</a></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = '';
+        
+        function openModal(type) { document.getElementById(`${type}Modal`).style.display = 'flex'; }
+        function closeModal(type) { document.getElementById(`${type}Modal`).style.display = 'none'; }
+        function switchModal(type) { closeModal(type === 'login' ? 'register' : 'login'); openModal(type); }
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    alert(' Login successful!');
+                    window.location.href = '/dashboard.html';
+                } else {
+                    alert(' ' + (data.detail || 'Login failed'));
+                }
+            } catch (error) { alert(' Error: ' + error.message); }
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const full_name = document.getElementById('regFullName').value;
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password, full_name })
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    alert(' Registration successful!');
+                    window.location.href = '/dashboard.html';
+                } else {
+                    alert(' ' + (data.detail || 'Registration failed'));
+                }
+            } catch (error) { alert(' Error: ' + error.message); }
+        });
+        
+        window.onclick = function(event) { if (event.target.classList.contains('modal')) event.target.style.display = 'none'; }
+        function scrollToFeatures() { document.getElementById('features').scrollIntoView({ behavior: 'smooth' }); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+import rasterio
+import numpy as np
+import psycopg2
+import os
+import sys
+import json
+from rasterio.mask import mask
+from shapely.geometry import mapping
+import geopandas as gpd
+from rasterio.transform import from_bounds
+
+DB_CONFIG = {
+    'host': 'localhost',
+    'port': 5432,
+    'database': 'agriculture_db',
+    'user': 'postgres',
+    'password': '456'
+}
+
+def calculate_ndvi(nir, red):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ndvi = np.where((nir + red) == 0, 0, (nir - red) / (nir + red))
+    return np.clip(ndvi, -1, 1)
+
+def calculate_ndre(nir, rededge):
+    with np.errstate(divide='ignore', invalid='ignore'):
+        ndre = np.where((nir + rededge) == 0, 0, (nir - rededge) / (nir + rededge))
+    return np.clip(ndre, -1, 1)
+
+def get_color_from_ndvi(value):
+    if value > 0.6: return '#1a9850'
+    elif value > 0.3: return '#d9ef8b'
+    elif value > 0: return '#fdae61'
+    else: return '#d73027'
+
+def get_color_from_ndre(value):
+    if value > 0.5: return '#1a9850'
+    elif value > 0.2: return '#d9ef8b'
+    elif value > 0: return '#fdae61'
+    else: return '#d73027'
+
+def process_all(upload_id, files_saved):
+    print(f"📊 Memproses multispektral untuk {upload_id}")
+    
+    # Load semua band
+    bands = {}
+    profile = None
+    for band_name, path in files_saved.items():
+        with rasterio.open(path) as src:
+            bands[band_name] = src.read(1).astype(float)
+            if profile is None:
+                profile = src.profile
+                transform = src.transform
+    
+    # Hitung NDVI dan NDRE
+    ndvi = calculate_ndvi(bands['nir'], bands['red']) if 'nir' in bands and 'red' in bands else None
+    ndre = calculate_ndre(bands['nir'], bands['rededge']) if 'nir' in bands and 'rededge' in bands else None
+    
+    # Simpan sebagai GeoTIFF
+    profile.update(dtype=rasterio.float32, count=1, compress='lzw')
+    
+    if ndvi is not None:
+        ndvi_path = os.path.join(files_saved['nir'].replace('nir.tif', ''), f"{upload_id}_ndvi.tif")
+        with rasterio.open(ndvi_path, 'w', **profile) as dst:
+            dst.write(ndvi.astype(np.float32), 1)
+    
+    if ndre is not None:
+        ndre_path = os.path.join(files_saved['nir'].replace('nir.tif', ''), f"{upload_id}_ndre.tif")
+        with rasterio.open(ndre_path, 'w', **profile) as dst:
+            dst.write(ndre.astype(np.float32), 1)
+    
+    # Update database
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE multispektral_data 
+        SET ndvi_path = %s, ndre_path = %s, status = 'completed'
+        WHERE upload_id = %s
+    """, (ndvi_path if ndvi else None, ndre_path if ndre else None, upload_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    print(f"✅ Selesai: NDVI={ndvi is not None}, NDRE={ndre is not None}")
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--upload_id", required=True)
+    parser.add_argument("--files_json", required=True)
+    parser.add_argument("--output_dir", required=True)
+    args = parser.parse_args()
+    
+    files_saved = json.loads(args.files_json)
+    process_all(args.upload_id, files_saved)
